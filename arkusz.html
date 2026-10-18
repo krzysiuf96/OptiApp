@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Arkusz Pracy 2026 - FINAL V11</title>
+    <style>
+        :root { --primary: #4caf50; --accent: #ffb300; --money: #81c784; --danger: #e53935; --dark: #121212; }
+        body { font-family: sans-serif; margin: 0; background: #121212; color: #e0e0e0; font-size: 14px; padding-bottom: 40px; }
+        .tabs { display: flex; background: #1e1e1e; position: sticky; top: 0; z-index: 100; overflow-x: auto; border-bottom: 1px solid #333; }
+        .tab { flex: 0 0 auto; padding: 12px 15px; text-align: center; color: #aaa; opacity: 0.8; cursor: pointer; white-space: nowrap; font-size: 13px; }
+        .tab.active { opacity: 1; border-bottom: 3px solid var(--accent); font-weight: bold; color: #fff; }
+        .content { padding: 5px; }
+        .card { background: #1e1e1e; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.5); margin-bottom: 10px; border: 1px solid #333; }
+        input, select { width: 100%; padding: 10px; margin-top: 4px; border: 1px solid #444; border-radius: 4px; font-size: 14px; box-sizing: border-box; background: #2c2c2c; color: #fff; }
+        .btn-add { width: 100%; background: var(--primary); color: white; border: none; padding: 14px; border-radius: 6px; font-size: 16px; font-weight: bold; margin-top: 10px; cursor: pointer; }
+        .mode-selector { display: flex; gap: 5px; margin-bottom: 15px; }
+        .mode-btn { flex: 1; padding: 10px; font-size: 12px; border: 1px solid #444; border-radius: 4px; background: #2c2c2c; color: #ccc; cursor: pointer; font-weight: bold; }
+        .mode-btn.active { background: var(--accent); color: #121212; border-color: var(--accent); }
+        .btn-reset { width: 100%; background: var(--danger); color: white; border: none; padding: 12px; border-radius: 6px; font-size: 14px; font-weight: bold; margin-top: 30px; margin-bottom: 50px; cursor: pointer; opacity: 0.9; }
+        
+        /* Tabele i Podsumowania */
+        .month-section { margin-top: 10px; background: #1e1e1e; border: 1px solid #444; overflow-x: auto; margin-bottom: 5px; border-radius: 4px; }
+        table { width: 100%; border-collapse: collapse; min-width: 320px; }
+        th, td { border: 1px solid #444; padding: 2px 1px; text-align: center; white-space: nowrap; font-size: 9px; color: #ddd; }
+        th { background: #2c2c2c; color: #fff; }
+        .sat-row { background-color: #332d12 !important; }
+        .filled-row { background-color: #1e1e1e; font-weight: bold; }
+        .empty-row { color: #666; }
+        .summary-box { background: #1e1e1e; padding: 10px; border: 2px solid #444; border-radius: 8px; font-size: 11px; margin-top: 5px; margin-bottom: 30px; color: #e0e0e0; }
+        .pula-card { background: #1e1e1e; color: white; border-radius: 8px; padding: 10px; margin-bottom: 15px; border: 1px solid #444; }
+        .summary-header { font-weight: bold; border-bottom: 1px solid #444; margin-bottom: 5px; padding-bottom: 2px; text-transform: uppercase; color: #fff; }
+        .summary-line { display: flex; justify-content: space-between; margin-bottom: 3px; border-bottom: 1px dashed #333; }
+        .val { font-weight: bold; color: var(--primary); }
+        .val-money { font-weight: bold; color: #81c784; }
+        .trash { color: #e53935; font-weight: bold; font-size: 12px; cursor: pointer; padding: 0 5px; }
+        .hidden { display: none; }
+        h3 { margin: 20px 0 10px 0; color: #fff; border-left: 4px solid var(--primary); padding-left: 10px; background: #1e1e1e; padding-top: 5px; padding-bottom: 5px; border-radius: 0 4px 4px 0; }
+
+        /* Style dla ustawień stawek */
+        .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; background: #252525; padding: 10px; border-radius: 6px; border: 1px solid #333; }
+        .settings-grid div { display: flex; flex-direction: column; }
+        .settings-grid label { font-size: 10px; font-weight: bold; color: #aaa; }
+        .settings-grid input { padding: 5px; margin-top: 2px; font-size: 12px; background: #1e1e1e; color: #fff; border-color: #444; }
+    </style>
+</head>
+<body>
+
+<div class="tabs">
+    <div id="t1" class="tab active" onclick="showTab(1)">Wprowadź</div>
+    <div id="t2" class="tab" onclick="showTab(2)">Miesiąc</div>
+    <div id="t3" class="tab" onclick="showTab(3)">Roczne</div>
+    <div id="t4" class="tab" onclick="showTab(4)">Finanse</div>
+    <div id="t5" class="tab" onclick="showTab(5)">Ustawienia</div>
+</div>
+
+<div id="content1" class="content">
+    <div class="card">
+        <div class="mode-selector">
+            <button class="mode-btn active" id="btnSingle" onclick="setMode('single')">Jeden dzień</button>
+            <button class="mode-btn" id="btnRange" onclick="setMode('range')">Zakres dni</button>
+        </div>
+        <div id="divSingle"><label>Data:</label><input type="date" id="workDate"></div>
+        <div id="divRange" class="hidden"><label>Od:</label><input type="date" id="dateStart"><label>Do:</label><input type="date" id="dateEnd"></div>
+        <label style="margin-top: 10px; display: block;">Rodzaj:</label>
+        <select id="dayType" onchange="toggleFields()">
+            <option value="work">Praca</option>
+            <option value="urlop_wyp">Urlop wypoczynkowy</option>
+            <option value="urlop_zad">Urlop na żądanie</option>
+            <option value="sila_wyzsza">Siła wyższa</option>
+        </select>
+        <div id="workFields">
+            <div style="display:flex; gap:5px; margin-top:10px;">
+                <div style="flex:1"><small>Start:</small><input type="time" id="sT" value="08:00"></div>
+                <div style="flex:1"><small>Koniec:</small><input type="time" id="eT" value="16:00"></div>
+            </div>
+        </div>
+        <div id="silaFields" class="hidden"><label>Godziny:</label><input type="number" id="sH" value="2"></div>
+        <button class="btn-add" onclick="save()">ZAPISZ DANE</button>
+    </div>
+</div>
+
+<div id="content2" class="content hidden"> <div id="historyMonth"></div> </div>
+<div id="content3" class="content hidden"> <div id="historyYear"></div> </div>
+<div id="content4" class="content hidden"> <div id="historyFinance"></div> </div>
+<div id="content5" class="content hidden"> 
+    <div id="settingsArea"></div>
+    <button class="btn-add" onclick="saveSettings()">ZAPISZ STAWKI</button>
+</div>
+
+<script>
+    const DB_KEY = 'arkusz_pracy_2026_final_v6';
+    const SETTINGS_KEY = 'arkusz_pracy_2026_settings';
+    const year = 2026;
+    let currentMode = 'single';
+    
+    const months = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
+
+    // Inicjalizacja stawek domyślnych
+    let defaultSettings = months.map(() => ({
+        rateBN: 30,
+        rateB50: 45,
+        rateOver: 45,
+        rateSat: 60,
+        premia: 500
+    }));
+
+    let db = JSON.parse(localStorage.getItem(DB_KEY)) || [];
+    let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || defaultSettings;
+
+    document.getElementById('workDate').valueAsDate = new Date();
+    document.getElementById('dateStart').valueAsDate = new Date();
+    document.getElementById('dateEnd').valueAsDate = new Date();
+
+    function setMode(m) { currentMode = m; document.getElementById('btnSingle').classList.toggle('active', m==='single'); document.getElementById('btnRange').classList.toggle('active', m==='range'); document.getElementById('divSingle').classList.toggle('hidden', m!=='single'); document.getElementById('divRange').classList.toggle('hidden', m!=='range'); }
+    function toggleFields() { const t = document.getElementById('dayType').value; document.getElementById('workFields').classList.toggle('hidden', t!=='work'); document.getElementById('silaFields').classList.toggle('hidden', t!=='sila_wyzsza'); }
+
+    function processEntry(dateStr) {
+        if(!dateStr) return;
+        const dObj = new Date(dateStr);
+        if (dObj.getDay() === 0) return;
+        db = db.filter(e => e.date !== dateStr);
+        const type = document.getElementById('dayType').value;
+        let e = { date: dateStr, type, mIdx: dObj.getMonth(), dateF: dObj.toLocaleDateString('pl-PL').slice(0,5), dayN: dObj.toLocaleDateString('pl-PL', {weekday: 'short'}), isSat: dObj.getDay() === 6, start: "-", end: "-", reg: 0, over: 0, bN: 0, b50: 0, sila: 0, satH: 0 };
+        if(type === 'work') {
+            const s = document.getElementById('sT').value.split(':');
+            const et = document.getElementById('eT').value.split(':');
+            let diff = (parseInt(et[0])*60+parseInt(et[1]) - (parseInt(s[0])*60+parseInt(s[1])))/60;
+            if(diff < 0) diff += 24;
+            e.start = document.getElementById('sT').value; e.end = document.getElementById('eT').value;
+            e.reg = diff > 8 ? 8 : diff; e.over = diff > 8 ? diff - 8 : 0;
+            if(e.over > 0) { e.bN = 0.25; e.b50 = 0.25; }
+            if(e.isSat) e.satH = diff;
+        } else if(type === 'sila_wyzsza') { e.sila = parseFloat(document.getElementById('sH').value) || 0; }
+        db.push(e);
+    }
+
+    function save() {
+        if (currentMode === 'single') processEntry(document.getElementById('workDate').value);
+        else {
+            let start = new Date(document.getElementById('dateStart').value);
+            let end = new Date(document.getElementById('dateEnd').value);
+            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) processEntry(d.toISOString().split('T')[0]);
+        }
+        localStorage.setItem(DB_KEY, JSON.stringify(db)); alert("Zapisano!"); showTab(2);
+    }
+
+    function calculateStats(entries, mIdx) {
+        let s = { over:0, overNetto:0, sila:0, sat:0, uw:0, uz:0, bn:0, b50:0, workDays:0, satCount:0 };
+        entries.forEach(e => {
+            if(e.type === 'work') { if(e.isSat) s.satCount++; else s.workDays++; }
+            s.over += e.over;
+            if(e.over > 0.5) s.overNetto += (e.over - 0.5);
+            s.sila += e.sila; s.sat += e.satH;
+            s.bn += e.bN; s.b50 += e.b50;
+            if(e.type==='urlop_wyp') s.uw++; if(e.type==='urlop_zad') s.uz++;
+        });
+        
+        const mSet = settings[mIdx];
+        s.payBN = s.bn * mSet.rateBN;
+        s.payB50 = s.b50 * mSet.rateB50;
+        s.payOver = s.overNetto * mSet.rateOver;
+        s.paySat = s.sat * mSet.rateSat;
+        s.premia = mSet.premia;
+        s.total = s.payBN + s.payB50 + s.payOver + s.paySat + s.premia;
+        return s;
+    }
+
+    function renderSettings() {
+        const area = document.getElementById('settingsArea');
+        area.innerHTML = "<h3>Konfiguracja stawek i premii</h3>";
+        months.forEach((m, idx) => {
+            area.innerHTML += `
+                <div class="card">
+                    <strong style="display:block; margin-bottom:10px; border-bottom:1px solid #333; color:#fff;">${m} 2026</strong>
+                    <div class="settings-grid">
+                        <div><label>Przerwa N (zł/h)</label><input type="number" id="bn_${idx}" value="${settings[idx].rateBN}"></div>
+                        <div><label>Przerwa 50% (zł/h)</label><input type="number" id="b50_${idx}" value="${settings[idx].rateB50}"></div>
+                        <div><label>Nadgodziny (zł/h)</label><input type="number" id="ov_${idx}" value="${settings[idx].rateOver}"></div>
+                        <div><label>Soboty (zł/h)</label><input type="number" id="sat_${idx}" value="${settings[idx].rateSat}"></div>
+                        <div style="grid-column: span 2;"><label>Premia (zł)</label><input type="number" id="pre_${idx}" value="${settings[idx].premia}"></div>
+                    </div>
+                </div>`;
+        });
+    }
+
+    function saveSettings() {
+        months.forEach((_, idx) => {
+            settings[idx] = {
+                rateBN: parseFloat(document.getElementById(`bn_${idx}`).value) || 0,
+                rateB50: parseFloat(document.getElementById(`b50_${idx}`).value) || 0,
+                rateOver: parseFloat(document.getElementById(`ov_${idx}`).value) || 0,
+                rateSat: parseFloat(document.getElementById(`sat_${idx}`).value) || 0,
+                premia: parseFloat(document.getElementById(`pre_${idx}`).value) || 0
+            };
+        });
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        alert("Stawki zostały zapisane!");
+    }
+
+    function getSummaryHTML(title, s) {
+        return `
+            <div class="summary-box">
+                <div class="summary-header">Podsumowanie: ${title}</div>
+                <div class="summary-line"><span>Suma nadgodzin:</span><span class="val">${s.over.toFixed(1)} h</span></div>
+                <div class="summary-line"><span>Nadgodziny (nadwyżka > 0.5h):</span><span class="val" style="color:#e53935">${s.overNetto.toFixed(2)} h</span></div>
+                <div class="summary-line"><span>Suma z sobót:</span><span class="val">${s.sat.toFixed(1)} h</span></div>
+                <div class="summary-line"><span>Siła wyższa:</span><span class="val">${s.sila} h</span></div>
+                <div class="summary-line"><span>Przerwy (N/50%):</span><span class="val">${s.bn.toFixed(2)}h / ${s.b50.toFixed(2)}h</span></div>
+                <div class="summary-line"><span>Urlop W/Ż:</span><span class="val">${s.uw} / ${s.uz} dni</span></div>
+                <div class="summary-line" style="border-top:1px solid #444; margin-top:5px; padding-top:2px;"><span>Dni robocze (PN-PT):</span><span class="val">${s.workDays}</span></div>
+                <div class="summary-line"><span>Licznik sobót:</span><span class="val">${s.satCount}</span></div>
+            </div>`;
+    }
+
+    function renderMonth() {
+        const area = document.getElementById('historyMonth'); area.innerHTML = "";
+        months.forEach((mName, mIdx) => {
+            let monthEntries = db.filter(e => e.mIdx === mIdx);
+            let s = calculateStats(monthEntries, mIdx);
+            let daysInMonth = new Date(year, mIdx + 1, 0).getDate();
+            let html = `<h3>${mName} 2026</h3><div class="month-section"><table><tr><th>Data</th><th>Dn</th><th>St</th><th>Ko</th><th>8h</th><th>Nd</th><th>P1</th><th>P2</th><th></th></tr>`;
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dStr = `${year}-${(mIdx+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
+                const entry = monthEntries.find(e => e.date === dStr);
+                const dObj = new Date(year, mIdx, d);
+                if (entry) {
+                    html += `<tr class="${entry.isSat?'sat-row':'filled-row'}"><td>${entry.dateF}</td><td>${entry.dayN}</td>${entry.type==='work'?`<td>${entry.start}</td><td>${entry.end}</td><td>${entry.reg.toFixed(1)}</td><td style="color:#e53935">${entry.over.toFixed(1)}</td><td>${entry.bN>0?'15min':'-'}</td><td>${entry.b50>0?'15min':'-'}</td>`:`<td colspan="6">${entry.type.toUpperCase()}</td>`}<td onclick="del('${entry.date}')" class="trash">×</td></tr>`;
+                } else {
+                    html += `<tr class="${dObj.getDay()===6?'sat-row':'empty-row'}"><td>${d.toString().padStart(2,'0')}.${(mIdx+1).toString().padStart(2,'0')}</td><td>${dObj.toLocaleDateString('pl-PL', {weekday: 'short'})}</td><td colspan="6">-</td><td></td></tr>`;
+                }
+            }
+            area.innerHTML += html + `</table></div>` + getSummaryHTML(mName, s);
+        });
+    }
+
+    function renderYear() {
+        const area = document.getElementById('historyYear');
+        let totalStats = calculateStats(db, 0); // uproszczony licznik urlopów
+        area.innerHTML = `<div class="pula-card"><div class="summary-header">PULA 2026:</div><div class="summary-line"><span>Urlop Wyp.:</span><span style="color:#81c784">${32-totalStats.uw-totalStats.uz} / 32</span></div><div class="summary-line"><span>Urlop Żąd.:</span><span style="color:#81c784">${4-totalStats.uz} / 4</span></div><div class="summary-line"><span>Siła wyższa:</span><span style="color:#81c784">${16-totalStats.sila} / 16h</span></div></div>`;
+        months.forEach((mName, idx) => { area.innerHTML += getSummaryHTML(mName, calculateStats(db.filter(e => e.mIdx === idx), idx)); });
+        area.innerHTML += `<button class="btn-reset" onclick="hardReset()">RESET DANYCH</button>`;
+    }
+
+    function renderFinance() {
+        const area = document.getElementById('historyFinance'); area.innerHTML = "<h3>Analiza Finansowa 2026</h3>";
+        months.forEach((mName, idx) => {
+            let s = calculateStats(db.filter(e => e.mIdx === idx), idx);
+            let mSet = settings[idx];
+            area.innerHTML += `
+                <div class="summary-box finance-box">
+                    <div class="summary-header">Miesiąc: ${mName}</div>
+                    <div class="summary-line"><span>Przerwa 15m (${mSet.rateBN}zł/h):</span><span>${s.payBN.toFixed(2)} zł</span></div>
+                    <div class="summary-line"><span>Przerwa 50% (${mSet.rateB50}zł/h):</span><span>${s.payB50.toFixed(2)} zł</span></div>
+                    <div class="summary-line"><span>Nadgodziny netto (${mSet.rateOver}zł/h):</span><span>${s.payOver.toFixed(2)} zł</span></div>
+                    <div class="summary-line"><span>Soboty (${mSet.rateSat}zł/h):</span><span>${s.paySat.toFixed(2)} zł</span></div>
+                    <div class="summary-line"><span>Premia miesięczna:</span><span>${s.premia.toFixed(2)} zł</span></div>
+                    <div class="summary-line" style="border-top:1px solid #444; margin-top:5px; padding-top:5px; font-weight:bold;">
+                        <span>DO WYPŁATY:</span><span class="val-money">${s.total.toFixed(2)} zł</span>
+                    </div>
+                </div>`;
+        });
+    }
+
+    function hardReset() { if(confirm("Czyścić wszystko?")) { localStorage.clear(); location.reload(); } }
+    function del(date) { if(confirm('Usunąć?')) { db = db.filter(e => e.date !== date); localStorage.setItem(DB_KEY, JSON.stringify(db)); renderMonth(); } }
+    
+    function showTab(n) {
+        document.querySelectorAll('.content').forEach(c => c.classList.add('hidden'));
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById('content'+n).classList.remove('hidden');
+        document.getElementById('t'+n).classList.add('active');
+        if(n===2) renderMonth();
+        if(n===3) renderYear();
+        if(n===4) renderFinance();
+        if(n===5) renderSettings();
+    }
+</script>
+</body>
+</html>
