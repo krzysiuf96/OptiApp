@@ -4,122 +4,113 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Moje Centrum Aplikacji</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <style>
-        :root {
-            --bg-color: #121212;
-            --card-bg: #1e1e1e;
-            --card-hover: #2c2c2c;
-            --accent: #ffb300;
-            --text-main: #ffffff;
-            --text-muted: #aaa;
-        }
+        :root { --bg-color: #121212; --card-bg: #1e1e1e; --card-hover: #2c2c2c; --accent: #ffb300; --text-main: #ffffff; --text-muted: #aaa; --danger: #e53935; }
+        body { font-family: sans-serif; background: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; }
         
-        body {
-            font-family: sans-serif;
-            background: var(--bg-color);
-            color: var(--text-main);
-            margin: 0;
-            padding: 20px;
-        }
+        /* Ekran logowania */
+        #authScreen { max-width: 350px; margin: 80px auto; background: var(--card-bg); padding: 25px; border-radius: 10px; border: 1px solid #333; box-shadow: 0 4px 10px rgba(0,0,0,0.5); text-align: center; }
+        #authScreen h2 { margin-bottom: 20px; color: var(--accent); }
+        .input-group { margin-bottom: 15px; text-align: left; }
+        .input-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 5px; }
+        .input-group input { width: 100%; padding: 10px; background: #2c2c2c; border: 1px solid #444; border-radius: 4px; color: #fff; box-sizing: border-box; }
+        .btn-auth { width: 100%; padding: 12px; background: var(--accent); color: #121212; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        #authError { color: var(--danger); font-size: 12px; margin-top: 10px; }
 
-        header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
+        /* Panel główny (kafelki) */
+        #appDashboard { display: none; }
+        header { text-align: center; margin-bottom: 30px; position: relative; }
+        header h1 { margin: 0; font-size: 24px; border-bottom: 2px solid var(--accent); display: inline-block; padding-bottom: 5px; }
+        .btn-logout { position: absolute; right: 0; top: 0; background: var(--danger); color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
 
-        header h1 {
-            margin: 0;
-            font-size: 24px;
-            color: var(--text-main);
-            border-bottom: 2px solid var(--accent);
-            display: inline-block;
-            padding-bottom: 5px;
-        }
-
-        /* Siatka kafelków */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 15px;
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-
-        /* Pojedynczy kafelek */
-        .tile {
-            background: var(--card-bg);
-            border: 1px solid #333;
-            border-radius: 10px;
-            padding: 20px;
-            text-decoration: none;
-            color: var(--text-main);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            height: 120px;
-            transition: transform 0.2s, background 0.2s, border-color 0.2s;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
-
-        .tile:hover {
-            background: var(--card-hover);
-            transform: translateY(-3px);
-            border-color: var(--accent);
-        }
-
-        .tile-title {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .tile-desc {
-            font-size: 12px;
-            color: var(--text-muted);
-        }
-
-        .tile-footer {
-            font-size: 11px;
-            color: var(--accent);
-            font-weight: bold;
-            align-self: flex-end;
-        }
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; max-width: 1000px; margin: 0 auto; }
+        .tile { background: var(--card-bg); border: 1px solid #333; border-radius: 10px; padding: 20px; text-decoration: none; color: var(--text-main); display: flex; flex-direction: column; justify-content: space-between; height: 120px; transition: transform 0.2s, background 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .tile:hover { background: var(--card-hover); transform: translateY(-3px); border-color: var(--accent); }
+        .tile-title { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
+        .tile-desc { font-size: 12px; color: var(--text-muted); }
+        .tile-footer { font-size: 11px; color: var(--accent); font-weight: bold; align-self: flex-end; }
     </style>
 </head>
 <body>
 
-    <header>
-        <h1>Moje Centrum Aplikacji</h1>
-    </header>
-
-    <div class="dashboard-grid">
-        <!-- Kafelek 1: Arkusz Pracy -->
-        <a href="arkusz.html" class="tile">
-            <div>
-                <div class="tile-title">Arkusz Pracy 2026</div>
-                <div class="tile-desc">Rozliczanie godzin, urlopów i finansów.</div>
-            </div>
-            <div class="tile-footer">Otwórz &rarr;</div>
-        </a>
-
-        <!-- Kafelek 2: Druga aplikacja (np. Notes) -->
-        <a href="notatnik.html" class="tile">
-            <div>
-                <div class="tile-title">Szybki Notatnik</div>
-                <div class="tile-desc">Twoje codzienne notatki i todo listy.</div>
-            </div>
-            <div class="tile-footer">Otwórz &rarr;</div>
-        </a>
-
-        <!-- Kafelek 3: Wolne miejsce na kolejną apkę -->
-        <a href="kalkulator.html" class="tile">
-            <div>
-                <div class="tile-title">Kalkulator / Finanse</div>
-                <div class="tile-desc">Miejsce na kolejny gotowy kod.</div>
-            </div>
-            <div class="tile-footer">Otwórz &rarr;</div>
-        </a>
+    <!-- EKRAN LOGOWANIA -->
+    <div id="authScreen">
+        <h2>Panel Logowania</h2>
+        <div class="input-group">
+            <label>E-mail:</label>
+            <input type="email" id="loginEmail" placeholder="twoj@email.com">
+        </div>
+        <div class="input-group">
+            <label>Hasło:</label>
+            <input type="password" id="loginPassword" placeholder="••••••••">
+        </div>
+        <button class="btn-auth" onclick="login()">Zaloguj się</button>
+        <div id="authError"></div>
     </div>
 
+    <!-- PANEL GŁÓWNY (Kafelki - ukryte przed logowaniem) -->
+    <div id="appDashboard">
+        <header>
+            <h1>Moje Centrum Aplikacji</h1>
+            <button class="btn-logout" onclick="logout()">Wyloguj</button>
+        </header>
+
+        <div class="dashboard-grid">
+            <a href="arkusz.html" class="tile">
+                <div>
+                    <div class="tile-title">Arkusz Pracy 2026</div>
+                    <div class="tile-desc">Rozliczanie godzin, urlopów i finansów w chmurze.</div>
+                </div>
+                <div class="tile-footer">Otwórz &rarr;</div>
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Konfiguracja Firebase wklejona z Twojego projektu:
+        const firebaseConfig = {
+            apiKey: "AIzaSyDQaB-H1oVQ2A5zjRmPsOUuobi1frXyWfM",
+            authDomain: "mojaaplikacja-d7d3f.firebaseapp.com",
+            databaseURL: "https://mojaaplikacja-d7d3f-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "mojaaplikacja-d7d3f",
+            storageBucket: "mojaaplikacja-d7d3f.firebasestorage.app",
+            messagingSenderId: "581389286236",
+            appId: "1:581389286236:web:899d059694584bc7395f99",
+            measurementId: "G-ES67XSMHZQ"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+
+        // Sprawdzanie stanu logowania
+        firebase.auth().onAuthStateChanged((user) => {
+            if (user) {
+                // Użytkownik zalogowany - pokaż pulpit
+                document.getElementById('authScreen').style.display = 'none';
+                document.getElementById('appDashboard').style.display = 'block';
+            } else {
+                // Brak sesji - pokaż ekran logowania
+                document.getElementById('authScreen').style.display = 'block';
+                document.getElementById('appDashboard').style.display = 'none';
+            }
+        });
+
+        function login() {
+            const email = document.getElementById('loginEmail').value;
+            const pass = document.getElementById('loginPassword').value;
+            document.getElementById('authError').innerText = "";
+
+            firebase.auth().signInWithEmailAndPassword(email, pass)
+                .catch((error) => {
+                    document.getElementById('authError').innerText = "Błąd logowania: " + error.message;
+                });
+        }
+
+        function logout() {
+            firebase.auth().signOut();
+        }
+    </script>
 </body>
 </html>
