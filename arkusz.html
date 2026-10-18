@@ -4,10 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Arkusz Pracy 2026 - FINAL V11</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <style>
         :root { --primary: #4caf50; --accent: #ffb300; --money: #81c784; --danger: #e53935; --dark: #121212; }
         body { font-family: sans-serif; margin: 0; background: #121212; color: #e0e0e0; font-size: 14px; padding-bottom: 40px; }
-        .tabs { display: flex; background: #1e1e1e; position: sticky; top: 0; z-index: 100; overflow-x: auto; border-bottom: 1px solid #333; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; background: #1e1e1e; padding: 10px 15px; border-bottom: 1px solid #333; }
+        .back-link { color: var(--accent); text-decoration: none; font-size: 13px; font-weight: bold; }
+        .tabs { display: flex; background: #1e1e1e; position: sticky; top: 43px; z-index: 100; overflow-x: auto; border-bottom: 1px solid #333; }
         .tab { flex: 0 0 auto; padding: 12px 15px; text-align: center; color: #aaa; opacity: 0.8; cursor: pointer; white-space: nowrap; font-size: 13px; }
         .tab.active { opacity: 1; border-bottom: 3px solid var(--accent); font-weight: bold; color: #fff; }
         .content { padding: 5px; }
@@ -42,9 +48,17 @@
         .settings-grid div { display: flex; flex-direction: column; }
         .settings-grid label { font-size: 10px; font-weight: bold; color: #aaa; }
         .settings-grid input { padding: 5px; margin-top: 2px; font-size: 12px; background: #1e1e1e; color: #fff; border-color: #444; }
+        #cloudStatus { text-align: center; font-size: 11px; padding: 4px; background: #222; color: #888; border-bottom: 1px solid #333; }
     </style>
 </head>
 <body>
+
+<div class="top-bar">
+    <a href="index.html" class="back-link">&larr; Powrót do Pulpitu</a>
+    <span id="userEmailDisplay" style="font-size: 11px; color: #aaa;">Ładowanie...</span>
+</div>
+
+<div id="cloudStatus">Łączenie z bazą...</div>
 
 <div class="tabs">
     <div id="t1" class="tab active" onclick="showTab(1)">Wprowadź</div>
@@ -89,14 +103,27 @@
 </div>
 
 <script>
-    const DB_KEY = 'arkusz_pracy_2026_final_v6';
-    const SETTINGS_KEY = 'arkusz_pracy_2026_settings';
+    // Konfiguracja Firebase z Twojego projektu
+    const firebaseConfig = {
+        apiKey: "AIzaSyDQaB-H1oVQ2A5zjRmPsOUuobi1frXyWfM",
+        authDomain: "mojaaplikacja-d7d3f.firebaseapp.com",
+        databaseURL: "https://mojaaplikacja-d7d3f-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "mojaaplikacja-d7d3f",
+        storageBucket: "mojaaplikacja-d7d3f.firebasestorage.app",
+        messagingSenderId: "581389286236",
+        appId: "1:581389286236:web:899d059694584bc7395f99",
+        measurementId: "G-ES67XSMHZQ"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+
     const year = 2026;
     let currentMode = 'single';
+    let currentUser = null;
+    let currentTab = 1;
     
     const months = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
 
-    // Inicjalizacja stawek domyślnych
     let defaultSettings = months.map(() => ({
         rateBN: 30,
         rateB50: 45,
@@ -105,8 +132,42 @@
         premia: 500
     }));
 
-    let db = JSON.parse(localStorage.getItem(DB_KEY)) || [];
-    let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || defaultSettings;
+    let db = [];
+    let settings = defaultSettings;
+
+    // Sprawdzanie uwierzytelniania i pobieranie danych z bazy chmurowej użytkownika
+    firebase.auth().onAuthStateChanged(user => {
+        if (user) {
+            currentUser = user;
+            document.getElementById('userEmailDisplay').innerText = user.email;
+            
+            const userPath = `users/${user.uid}/arkusz_pracy_2026`;
+            
+            firebase.database().ref(userPath + '/db').on('value', snapshot => {
+                db = snapshot.val() || [];
+                document.getElementById('cloudStatus').innerText = "☁️ Zsynchronizowano z chmurą";
+                document.getElementById('cloudStatus').style.color = "#81c784";
+                refreshCurrentTab();
+            });
+
+            firebase.database().ref(userPath + '/settings').on('value', snapshot => {
+                settings = snapshot.val() || defaultSettings;
+                refreshCurrentTab();
+            });
+        } else {
+            window.location.href = 'index.html';
+        }
+    });
+
+    function saveToCloud() {
+        if (!currentUser) return;
+        const userPath = `users/${currentUser.uid}/arkusz_pracy_2026`;
+        document.getElementById('cloudStatus').innerText = "⏳ Zapisywanie...";
+        document.getElementById('cloudStatus').style.color = "#ffb300";
+        
+        firebase.database().ref(userPath + '/db').set(db);
+        firebase.database().ref(userPath + '/settings').set(settings);
+    }
 
     document.getElementById('workDate').valueAsDate = new Date();
     document.getElementById('dateStart').valueAsDate = new Date();
@@ -142,7 +203,7 @@
             let end = new Date(document.getElementById('dateEnd').value);
             for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) processEntry(d.toISOString().split('T')[0]);
         }
-        localStorage.setItem(DB_KEY, JSON.stringify(db)); alert("Zapisano!"); showTab(2);
+        saveToCloud(); alert("Zapisano!"); showTab(2);
     }
 
     function calculateStats(entries, mIdx) {
@@ -156,7 +217,7 @@
             if(e.type==='urlop_wyp') s.uw++; if(e.type==='urlop_zad') s.uz++;
         });
         
-        const mSet = settings[mIdx];
+        const mSet = settings[mIdx] || defaultSettings[mIdx];
         s.payBN = s.bn * mSet.rateBN;
         s.payB50 = s.b50 * mSet.rateB50;
         s.payOver = s.overNetto * mSet.rateOver;
@@ -170,15 +231,16 @@
         const area = document.getElementById('settingsArea');
         area.innerHTML = "<h3>Konfiguracja stawek i premii</h3>";
         months.forEach((m, idx) => {
+            const set = settings[idx] || defaultSettings[idx];
             area.innerHTML += `
                 <div class="card">
                     <strong style="display:block; margin-bottom:10px; border-bottom:1px solid #333; color:#fff;">${m} 2026</strong>
                     <div class="settings-grid">
-                        <div><label>Przerwa N (zł/h)</label><input type="number" id="bn_${idx}" value="${settings[idx].rateBN}"></div>
-                        <div><label>Przerwa 50% (zł/h)</label><input type="number" id="b50_${idx}" value="${settings[idx].rateB50}"></div>
-                        <div><label>Nadgodziny (zł/h)</label><input type="number" id="ov_${idx}" value="${settings[idx].rateOver}"></div>
-                        <div><label>Soboty (zł/h)</label><input type="number" id="sat_${idx}" value="${settings[idx].rateSat}"></div>
-                        <div style="grid-column: span 2;"><label>Premia (zł)</label><input type="number" id="pre_${idx}" value="${settings[idx].premia}"></div>
+                        <div><label>Przerwa N (zł/h)</label><input type="number" id="bn_${idx}" value="${set.rateBN}"></div>
+                        <div><label>Przerwa 50% (zł/h)</label><input type="number" id="b50_${idx}" value="${set.rateB50}"></div>
+                        <div><label>Nadgodziny (zł/h)</label><input type="number" id="ov_${idx}" value="${set.rateOver}"></div>
+                        <div><label>Soboty (zł/h)</label><input type="number" id="sat_${idx}" value="${set.rateSat}"></div>
+                        <div style="grid-column: span 2;"><label>Premia (zł)</label><input type="number" id="pre_${idx}" value="${set.premia}"></div>
                     </div>
                 </div>`;
         });
@@ -194,7 +256,7 @@
                 premia: parseFloat(document.getElementById(`pre_${idx}`).value) || 0
             };
         });
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        saveToCloud();
         alert("Stawki zostały zapisane!");
     }
 
@@ -236,7 +298,7 @@
 
     function renderYear() {
         const area = document.getElementById('historyYear');
-        let totalStats = calculateStats(db, 0); // uproszczony licznik urlopów
+        let totalStats = calculateStats(db, 0);
         area.innerHTML = `<div class="pula-card"><div class="summary-header">PULA 2026:</div><div class="summary-line"><span>Urlop Wyp.:</span><span style="color:#81c784">${32-totalStats.uw-totalStats.uz} / 32</span></div><div class="summary-line"><span>Urlop Żąd.:</span><span style="color:#81c784">${4-totalStats.uz} / 4</span></div><div class="summary-line"><span>Siła wyższa:</span><span style="color:#81c784">${16-totalStats.sila} / 16h</span></div></div>`;
         months.forEach((mName, idx) => { area.innerHTML += getSummaryHTML(mName, calculateStats(db.filter(e => e.mIdx === idx), idx)); });
         area.innerHTML += `<button class="btn-reset" onclick="hardReset()">RESET DANYCH</button>`;
@@ -246,7 +308,7 @@
         const area = document.getElementById('historyFinance'); area.innerHTML = "<h3>Analiza Finansowa 2026</h3>";
         months.forEach((mName, idx) => {
             let s = calculateStats(db.filter(e => e.mIdx === idx), idx);
-            let mSet = settings[idx];
+            let mSet = settings[idx] || defaultSettings[idx];
             area.innerHTML += `
                 <div class="summary-box finance-box">
                     <div class="summary-header">Miesiąc: ${mName}</div>
@@ -262,18 +324,23 @@
         });
     }
 
-    function hardReset() { if(confirm("Czyścić wszystko?")) { localStorage.clear(); location.reload(); } }
-    function del(date) { if(confirm('Usunąć?')) { db = db.filter(e => e.date !== date); localStorage.setItem(DB_KEY, JSON.stringify(db)); renderMonth(); } }
+    function hardReset() { if(confirm("Czyścić wszystko?")) { db = []; saveToCloud(); } }
+    function del(date) { if(confirm('Usunąć?')) { db = db.filter(e => e.date !== date); saveToCloud(); } }
     
+    function refreshCurrentTab() {
+        if(currentTab===2) renderMonth();
+        if(currentTab===3) renderYear();
+        if(currentTab===4) renderFinance();
+        if(currentTab===5) renderSettings();
+    }
+
     function showTab(n) {
+        currentTab = n;
         document.querySelectorAll('.content').forEach(c => c.classList.add('hidden'));
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.getElementById('content'+n).classList.remove('hidden');
         document.getElementById('t'+n).classList.add('active');
-        if(n===2) renderMonth();
-        if(n===3) renderYear();
-        if(n===4) renderFinance();
-        if(n===5) renderSettings();
+        refreshCurrentTab();
     }
 </script>
 </body>
